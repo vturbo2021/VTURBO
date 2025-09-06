@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     startScanBtn.addEventListener('click', async () => {
-        resultElement.textContent = '...'; // Limpa o resultado anterior
+        resultElement.textContent = 'Procurando...'; // Atualiza o status
         cameraView.style.display = 'block'; // Mostra o vídeo
 
         try {
@@ -44,12 +44,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (barcodes.length > 0) {
                 // 4. Código de barras encontrado!
                 const barcodeValue = barcodes[0].rawValue;
-                resultElement.textContent = barcodeValue;
                 console.log('Código de barras detectado:', barcodeValue);
 
                 // Para o vídeo e a câmera
                 stream.getTracks().forEach(track => track.stop());
                 cameraView.style.display = 'none';
+
+                setTimeout(() => { resultElement.textContent = barcodeValue; }, 100);
                 return; // Para a detecção
             }
 

@@ -3,18 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <title>Scanner de Encomendas</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <h1>Sistema de Leitura de Encomendas</h1>
+    <h1>VTURBO ENTREGAS</h1>
 
-    <button id="start-scan-btn">Escanear Código de Barras</button>
-
-    <video id="camera-view" autoplay playsinline></video>
-
-    <p>Código escaneado: <strong id="result"></strong></p>
+    <div id="main-content">
+        <video id="camera-view" autoplay playsinline></video>
+        <div id="result-container">
+            <p>Código escaneado: <strong id="result">Aguardando...</strong></p>
+        </div>
+    </div>
+    
+    <button id="start-scan-btn">ESCANEAR</button>
 
     <script src="scanner.js"></script>
 </body>
