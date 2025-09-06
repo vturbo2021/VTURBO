@@ -50,7 +50,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 stream.getTracks().forEach(track => track.stop());
                 cameraView.style.display = 'none';
 
-                setTimeout(() => { resultElement.textContent = barcodeValue; }, 100);
+                // AGORA, VAMOS PESQUISAR O CÓDIGO NA PLANILHA
+                searchBarcodeInSheet(barcodeValue);
+
                 return; // Para a detecção
             }
 
@@ -58,6 +60,44 @@ document.addEventListener('DOMContentLoaded', () => {
             requestAnimationFrame(detectBarcode);
         } catch (error) {
             console.error('Erro na detecção do código de barras:', error);
+        }
+    }
+
+    async function searchBarcodeInSheet(barcode) {
+        resultElement.textContent = 'Verificando na planilha...';
+
+        // Constrói a URL para a API do Google Sheets
+        const range = `${SHEET_NAME}!A:C`; // Pesquisa na coluna A e retorna dados das colunas A, B e C
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?key=${GOOGLE_API_KEY}`;
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error('Erro ao acessar a planilha. Verifique as permissões e a chave de API.');
+            }
+
+            const data = await response.json();
+            const rows = data.values;
+
+            if (rows) {
+                const foundRow = rows.find(row => row[0] === barcode); // Procura o código na primeira coluna (índice 0)
+
+                if (foundRow) {
+                    // Código encontrado! Exibe os dados.
+                    // Exemplo: "Caixa Média - Status: Em trânsito"
+                    const productInfo = foundRow[1] || 'N/A';
+                    const statusInfo = foundRow[2] || 'N/A';
+                    resultElement.innerHTML = `<strong>${productInfo}</strong><br>Status: ${statusInfo}`;
+                } else {
+                    // Código não encontrado na planilha
+                    resultElement.textContent = `Código ${barcode} não encontrado!`;
+                }
+            } else {
+                resultElement.textContent = 'Planilha vazia ou não encontrada.';
+            }
+        } catch (error) {
+            console.error('Erro na busca:', error);
+            resultElement.textContent = 'Falha na comunicação com a planilha.';
         }
     }
 });
