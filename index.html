@@ -6,21 +6,27 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-    <title>Scanner de Encomendas</title>
+    <title>Scanner de Entregas</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <h1>VTURBO ENTREGAS</h1>
+    <h1>VTURBO ENTREGAS 2.0</h1>
 
     <div id="main-content">
+        <div id="input-container">
+            <label for="barcode-input">Digite ou escaneie o código:</label>
+            <input type="text" id="barcode-input" placeholder="Aguardando scanner...">
+        </div>
         <video id="camera-view" autoplay playsinline></video>
         <div id="result-container">
             <p>Código escaneado: <strong id="result">Aguardando...</strong></p>
         </div>
     </div>
     
-    <button id="start-scan-btn">ESCANEAR</button>
+    <div id="camera-button-container">
+        <button id="start-scan-btn">Escanear com Câmera</button>
+    </div>
 
     <script src="config.js"></script>
     <script src="scanner.js"></script>

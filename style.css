@@ -36,6 +36,29 @@ h1 {
     padding: 70px 0 90px 0; /* Espaçamento para não ficar atrás do header/footer */
 }
 
+/* Estilo para o container do input */
+#input-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+label[for="barcode-input"] {
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #555;
+}
+
+#barcode-input {
+    padding: 12px;
+    width: 280px;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    font-size: 16px;
+    text-align: center;
+}
+
 /* Estilo da janela da câmera */
 #camera-view {
     width: 100%;
@@ -46,24 +69,28 @@ h1 {
     display: none; /* Começa escondido */
 }
 
-/* Botão de Scan */
-#start-scan-btn {
+/* Container do botão da câmera (rodapé) */
+#camera-button-container {
     background-color: #3949ab; /* Azul índigo */
-    color: white;
-    border: none;
-    padding: 15px 30px;
-    font-size: 16px;
-    font-weight: 700; /* Deixa a fonte um pouco mais forte */
-    border-radius: 0; /* Remove o arredondamento para o estilo de barra */
-    cursor: pointer;
-    transition: background-color 0.3s ease;
     position: fixed; /* Fixa o botão na tela */
     bottom: 0; /* Alinha na base */
     left: 0; /* Alinha na esquerda */
     width: 100%; /* Ocupa toda a largura */
-    margin: 0; /* Remove margens */
-    box-shadow: 0 -2px 5px rgba(0,0,0,0.1); /* Sombra para cima */
     z-index: 10; /* Garante que o botão fique por cima */
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.1); /* Sombra para cima */
+}
+
+/* Botão de Scan */
+#start-scan-btn {
+    background-color: transparent;
+    color: white;
+    border: none;
+    width: 100%;
+    padding: 15px 30px;
+    font-size: 16px;
+    font-weight: 700; /* Deixa a fonte um pouco mais forte */
+    cursor: pointer;
+    margin: 0; /* Remove margens */
 }
 
 #start-scan-btn:hover {

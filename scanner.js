@@ -2,21 +2,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const startScanBtn = document.getElementById('start-scan-btn');
     const cameraView = document.getElementById('camera-view');
     const resultElement = document.getElementById('result');
+    const barcodeInput = document.getElementById('barcode-input');
     let stream = null;
+    let barcodeDetector = null;
 
     // 1. Verifica se o navegador suporta a API BarcodeDetector
     if (!('BarcodeDetector' in window)) {
-        alert('Seu navegador não suporta a detecção de código de barras.');
-        startScanBtn.disabled = true;
-        return;
+        // Se não suporta, simplesmente esconde o botão da câmera.
+        document.getElementById('camera-button-container').style.display = 'none';
+    } else {
+        barcodeDetector = new BarcodeDetector({
+            formats: ['code_128', 'ean_13', 'qr_code'] // Adicione outros formatos se necessário
+        });
     }
 
-    const barcodeDetector = new BarcodeDetector({
-        formats: ['code_128', 'ean_13', 'qr_code'] // Adicione outros formatos se necessário
-    });
-
     startScanBtn.addEventListener('click', async () => {
-        resultElement.textContent = 'Procurando...'; // Atualiza o status
+        if (!barcodeDetector) return; // Não faz nada se a API não for suportada
+        // Esconde o input para dar espaço para a câmera
+        document.getElementById('input-container').style.display = 'none';
+        resultElement.textContent = 'Aponte para o código...';
+
         cameraView.style.display = 'block'; // Mostra o vídeo
 
         try {
@@ -37,7 +42,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Lógica para o scanner de mão (input de texto)
+    barcodeInput.addEventListener('keypress', (event) => {
+        // Verifica se a tecla pressionada foi "Enter"
+        if (event.key === 'Enter') {
+            event.preventDefault(); // Impede o comportamento padrão do Enter (ex: submeter um formulário)
+            const barcodeValue = barcodeInput.value.trim();
+
+            if (barcodeValue) {
+                searchBarcodeInSheet(barcodeValue);
+                // Limpa o campo e o foca novamente para o próximo scan
+                barcodeInput.value = '';
+                barcodeInput.focus();
+            }
+        }
+    });
+
     async function detectBarcode() {
+        if (!barcodeDetector) return; // Garante que não execute se não for suportado
+
         try {
             const barcodes = await barcodeDetector.detect(cameraView);
 
@@ -49,6 +72,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Para o vídeo e a câmera
                 stream.getTracks().forEach(track => track.stop());
                 cameraView.style.display = 'none';
+                
+                // Mostra o input novamente
+                document.getElementById('input-container').style.display = 'flex';
 
                 // AGORA, VAMOS PESQUISAR O CÓDIGO NA PLANILHA
                 searchBarcodeInSheet(barcodeValue);
@@ -65,6 +91,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function searchBarcodeInSheet(barcode) {
         resultElement.textContent = 'Verificando na planilha...';
+
+        // Adiciona uma verificação para garantir que as variáveis de config existem
+        if (typeof GOOGLE_API_KEY === 'undefined' || typeof SPREADSHEET_ID === 'undefined') {
+            resultElement.textContent = 'Erro: Arquivo de configuração não encontrado.';
+            return;
+        }
+        if (typeof APPS_SCRIPT_URL === 'undefined' || APPS_SCRIPT_URL.includes("COLE_A_URL_DO_SEU_SCRIPT_AQUI")) {
+            resultElement.textContent = 'Erro: URL do Apps Script não configurada no arquivo config.js.';
+            console.error("A variável APPS_SCRIPT_URL não está configurada.");
+            return;
+        }
 
         // Constrói a URL para a API do Google Sheets
         const range = `${SHEET_NAME}!A:C`; // Pesquisa na coluna A e retorna dados das colunas A, B e C
@@ -84,13 +121,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (foundRow) {
                     // Código encontrado! Exibe os dados.
-                    // Exemplo: "Caixa Média - Status: Em trânsito"
-                    const productInfo = foundRow[1] || 'N/A';
-                    const statusInfo = foundRow[2] || 'N/A';
-                    resultElement.innerHTML = `<strong>${productInfo}</strong><br>Status: ${statusInfo}`;
+                    // Pega o valor da coluna B (índice 1)
+                    const numeroPedido = foundRow[1] || 'Não informado';
+                    
+                    resultElement.innerHTML = `Nº do Pedido: <strong>${numeroPedido}</strong><br>Buscando no Drive...`;
+                    
+                    // Chama a função para buscar a pasta usando nosso script
+                    searchFolderWithAppsScript(numeroPedido);
                 } else {
                     // Código não encontrado na planilha
-                    resultElement.textContent = `Código ${barcode} não encontrado!`;
+                    resultElement.textContent = `${barcode} não encontrado!`;
                 }
             } else {
                 resultElement.textContent = 'Planilha vazia ou não encontrada.';
@@ -98,6 +138,31 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Erro na busca:', error);
             resultElement.textContent = 'Falha na comunicação com a planilha.';
+        }
+    }
+
+    async function searchFolderWithAppsScript(folderName) {
+        const url = `${APPS_SCRIPT_URL}?folderName=${encodeURIComponent(folderName)}`;
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.success && data.url) {
+                // Pasta encontrada pelo script!
+                resultElement.innerHTML = `Nº do Pedido: <strong>${folderName}</strong><br><a href="${data.url}" target="_blank">Pasta encontrada no Drive!</a>`;
+            } else {
+                // Pasta não encontrada ou erro no script
+                let message = data.message || "Pasta não encontrada no Drive.";
+                if (data.error) {
+                    console.error("Erro no Apps Script:", data.error);
+                }
+                resultElement.innerHTML = `Nº do Pedido: <strong>${folderName}</strong><br>${message}`;
+            }
+
+        } catch (error) {
+            console.error('Erro ao chamar o Apps Script:', error);
+            resultElement.innerHTML = `Nº do Pedido: <strong>${folderName}</strong><br>Falha ao buscar no Drive.`;
         }
     }
 });
