@@ -83,26 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    function handleBarcodeFound(barcodeValue) {
-        console.log('Código de barras detectado:', barcodeValue);
-
-        // Para a câmera e o scanner
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-        }
-        if (zxingCodeReader) {
-            zxingCodeReader.reset(); // Para a detecção do ZXing
-        }
-        cameraView.style.display = 'none';
-        
-        // Mostra a UI principal novamente
-        document.getElementById('input-container').style.display = 'flex';
-        document.getElementById('camera-button-container').style.display = 'block';
-
-        // Pesquisa o código na planilha
-        searchBarcodeInSheet(barcodeValue);
-    }
-
     async function detectBarcode() {
         if (!barcodeDetector || cameraView.style.display === 'none') return;
 
@@ -150,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
             resultElement.textContent = 'Erro: Arquivo de configuração não encontrado.';
             return;
         }
-        if (typeof APPS_SCRIPT_URL === 'undefined' || APPS_SCRIPT_URL.includes("https://script.google.com/macros/s/AKfycbzO-F73N55oLF0ZM9zBvoFCdmrlo-92x8lkIvVTAoaApf0mVz_MdY5eLHppzMEf9P0ZdQ/exec")) {
+        if (typeof APPS_SCRIPT_URL === 'undefined' || APPS_SCRIPT_URL === '') {
             resultElement.textContent = 'Erro: URL do Apps Script não configurada no arquivo config.js.';
             console.error("A variável APPS_SCRIPT_URL não está configurada.");
             return;
@@ -191,7 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     // Código não encontrado na planilha
                     resultElement.textContent = `${barcode} não encontrado!`;
-                    photoCaptureContainer.style.display = 'none'; // Garante que a seção de fotos seja escondida
                 }
             } else {
                 resultElement.textContent = 'Planilha vazia ou não encontrada.';
@@ -199,150 +178,114 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error('Erro na busca:', error);
-            resultElement.textContent = `Falha na busca: ${error.message}`;
+            resultElement.textContent = 'Falha na comunicação com a planilha.';
+        }
+    }
+
+    async function searchFolderWithAppsScript(folderName) {
+        const url = `${APPS_SCRIPT_URL}?folderName=${encodeURIComponent(folderName)}`;
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.success && data.url) {
+                // Pasta encontrada pelo script!
+                resultElement.innerHTML = `Nº do Pedido: <strong>${folderName}</strong><br><a href="${data.url}" target="_blank">Pasta encontrada!</a>`;
+                
+                // Mostra o container para tirar fotos
+                photoCaptureContainer.style.display = 'flex';
+                startPhotoBtn.style.display = 'block';
+                capturePhotoBtn.style.display = 'none';
+
+                // Configura o evento para o botão "Tirar Fotos"
+                // Usamos .onclick para sobrescrever eventos anteriores e evitar múltiplos listeners
+                startPhotoBtn.onclick = () => {
+                    startPhotoCamera(data.folderId, folderName);
+                };
+
+            } else {
+                // Pasta não encontrada ou erro no script
+                let message = data.message || "Pasta não encontrada no Drive.";
+                if (data.error) {
+                    console.error("Erro no Apps Script:", data.error);
+                }
+                resultElement.innerHTML = `Nº do Pedido: <strong>${folderName}</strong><br>${message}`;
+                photoCaptureContainer.style.display = 'none'; // Esconde se não achou a pasta
+            }
+
+        } catch (error) {
+            console.error('Erro ao chamar o Apps Script:', error);
+            resultElement.innerHTML = `Nº do Pedido: <strong>${folderName}</strong><br>Falha ao buscar no Drive.`;
             photoCaptureContainer.style.display = 'none';
         }
     }
 
-    async function startPhotoCamera(folderName, barcode) {
-        // Elementos que serão escondidos temporariamente
-        const inputContainer = document.getElementById('input-container');
-        const resultContainer = document.getElementById('result-container');
-
-        // Array para armazenar as fotos em cache
-        const photoCache = [];
-        const TOTAL_PHOTOS = 6;
-
-        // Reseta e mostra os indicadores de progresso
-        for (let i = 1; i <= TOTAL_PHOTOS; i++) {
-            document.getElementById(`photo${i}-status`).textContent = `Foto ${i}: ⚪`;
-            document.getElementById(`thumbnail-${i}`).src = "";
-            document.getElementById(`thumbnail-${i}`).style.display = 'none';
-        }
-        photoThumbnailsContainer.style.display = 'none';
-        photoProgressIndicator.style.display = 'block';
-
-        startPhotoBtn.style.display = 'none'; // Esconde o botão de iniciar
+    async function startPhotoCamera(folderId, folderName) {
+        startPhotoBtn.style.display = 'none';
         resultElement.innerHTML = `Nº do Pedido: <strong>${folderName}</strong><br>Prepare-se para a foto 1...`;
-        cameraView.style.display = 'block';   // Mostra a visualização da câmera
-        capturePhotoBtn.style.display = 'block'; // Mostra o botão de captura imediatamente
-
-        // Esconde os elementos para dar espaço para a câmera
-        inputContainer.style.display = 'none';
-        resultContainer.style.display = 'none';
-
-        // Limpa listeners antigos para evitar execuções múltiplas
-        let captureClickHandler = null;
-        capturePhotoBtn.removeEventListener('click', captureClickHandler);
+        cameraView.style.display = 'block';
 
         try {
             stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
             cameraView.srcObject = stream;
             await cameraView.play();
 
-            // Define a função para capturar a foto
-            captureClickHandler = async () => {
+            capturePhotoBtn.style.display = 'block';
+            let photoCount = 0;
+
+            capturePhotoBtn.onclick = async () => {
+                if (photoCount >= 2) return;
+
                 // 1. Captura a imagem
                 photoCanvas.width = cameraView.videoWidth;
                 photoCanvas.height = cameraView.videoHeight;
                 const context = photoCanvas.getContext('2d');
                 context.drawImage(cameraView, 0, 0, photoCanvas.width, photoCanvas.height);
                 const imageData = photoCanvas.toDataURL('image/jpeg');
-                photoCache.push(imageData);
 
-                // 2. Atualiza a UI
-                const photoNumber = photoCache.length;
-                document.getElementById(`photo${photoNumber}-status`).textContent = `Foto ${photoNumber}: ✅`;
-                document.getElementById(`thumbnail-${photoNumber}`).src = imageData;
-                document.getElementById(`thumbnail-${photoNumber}`).style.display = 'inline-block';
-                
-                if (photoNumber === 1) {
-                    photoThumbnailsContainer.style.display = 'flex'; // Mostra o container de miniaturas
-                }
+                photoCount++;
+                capturePhotoBtn.disabled = true;
+                capturePhotoBtn.textContent = `Enviando foto ${photoCount}...`;
 
-                if (photoNumber < TOTAL_PHOTOS) {
-                    resultElement.innerHTML = `Nº do Pedido: <strong>${folderName}</strong><br>Prepare-se para a foto ${photoNumber + 1}...`;
+                // 3. Envia para o Apps Script
+                await uploadPhotoToDrive(imageData, folderId, folderName, photoCount);
+
+                capturePhotoBtn.disabled = false;
+
+                if (photoCount < 2) {
+                    capturePhotoBtn.textContent = 'Capturar Foto';
+                    resultElement.innerHTML = `Nº do Pedido: <strong>${folderName}</strong><br>Prepare-se para a foto ${photoCount + 1}...`;
                 } else {
                     resultElement.innerHTML = `Nº do Pedido: <strong>${folderName}</strong><br>Captura finalizada!`;
 
                     // Para a câmera e finaliza o processo
                     stream.getTracks().forEach(track => track.stop());
                     cameraView.style.display = 'none';
-                    capturePhotoBtn.style.display = 'none'; // Esconde o botão de captura
-                    saveLocalBtn.style.display = 'block'; // Mostra o botão de salvar
-
-                    // Reexibe os containers principais, pronto para um novo scan
-                    inputContainer.style.display = 'flex';
-                    resultContainer.style.display = 'block';
-
-                    // Adiciona o evento para o botão de salvar
-                    saveLocalBtn.onclick = async () => {
-                        if (!window.showDirectoryPicker) {
-                            alert("Seu navegador não suporta salvar em uma pasta específica. As fotos serão baixadas individualmente.");
-                            // Fallback para navegadores sem suporte
-                            photoCache.forEach((imgData, index) => {
-                                const link = document.createElement('a');
-                                link.href = imgData;
-                                link.download = `${barcode}_${index + 1}.jpg`;
-                                link.click();
-                            });
-                        } else {
-                            // Lógica para salvar na pasta escolhida pelo usuário
-                            await savePhotosToDirectory(photoCache, folderName, barcode);
-                        }
-                        saveLocalBtn.style.display = 'none'; // Esconde o botão após o uso
-                        saveLocalBtn.onclick = null; // Limpa o evento para evitar chamadas múltiplas
-                    };
-
-                    capturePhotoBtn.removeEventListener('click', captureClickHandler);
+                    capturePhotoBtn.style.display = 'none';
+                    startPhotoBtn.style.display = 'block'; // Permite tirar fotos novamente se quiser
+                    resultElement.innerHTML = `Nº do Pedido: <strong>${folderName}</strong><br>Fotos enviadas com sucesso!`;
                 }
             };
-
-            // Adiciona o listener inicial para capturar as fotos
-            capturePhotoBtn.addEventListener('click', captureClickHandler);
 
         } catch (error) {
             console.error('Erro ao iniciar câmera para fotos:', error);
             alert('Não foi possível acessar a câmera para tirar fotos.');
-            // Garante que a UI volte ao normal em caso de erro na câmera
-            inputContainer.style.display = 'flex';
-            resultContainer.style.display = 'block';
-            capturePhotoBtn.removeEventListener('click', captureClickHandler);
         }
     }
 
-    async function savePhotosToDirectory(photos, folderName, barcode) {
-        try {
-            // 1. Pede ao usuário para escolher uma pasta
-            const dirHandle = await window.showDirectoryPicker();
+    async function uploadPhotoToDrive(imageData, folderId, folderName, photoNumber) {
+        const payload = {
+            folderId: folderId,
+            imageData: imageData.split(',')[1], // Remove o "data:image/jpeg;base64,"
+            fileName: `${folderName}-foto-${photoNumber}.jpg`
+        };
 
-            resultElement.innerHTML = `Nº do Pedido: <strong>${folderName}</strong><br>Salvando fotos...`;
-
-            // 2. Itera sobre as fotos em cache e as salva
-            for (let i = 0; i < photos.length; i++) {
-                const imgData = photos[i];
-                const fileName = `${barcode}_${i + 1}.jpg`;
-
-                // Converte a imagem Base64 para um Blob
-                const response = await fetch(imgData);
-                const blob = await response.blob();
-
-                // Cria o arquivo na pasta escolhida
-                const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
-                const writable = await fileHandle.createWritable();
-                await writable.write(blob);
-                await writable.close();
-            }
-
-            resultElement.innerHTML = `Nº do Pedido: <strong>${folderName}</strong><br>Fotos salvas com sucesso na pasta escolhida!`;
-        } catch (error) {
-            // O erro mais comum é o usuário cancelar a seleção da pasta.
-            console.error('Erro ao salvar fotos localmente:', error);
-            if (error.name !== 'AbortError') {
-                resultElement.innerHTML = `Nº do Pedido: <strong>${folderName}</strong><br><span style="color: red;">Falha ao salvar as fotos.</span>`;
-            } else {
-                resultElement.innerHTML = `Nº do Pedido: <strong>${folderName}</strong><br>Operação de salvamento cancelada.`;
-            }
-        }
+        await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        // Não estamos tratando o retorno aqui por simplicidade, mas poderia ser feito.
     }
 });
