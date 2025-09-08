@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const startScanBtn = document.getElementById('start-scan-btn');
     const cameraView = document.getElementById('camera-view');
-    const resultElement = document.getElementById('result');
+    const resultElement = document.getElementById('result-container');
     const barcodeInput = document.getElementById('barcode-input');
     let stream = null;
     // Elementos para a captura de fotos
@@ -150,6 +150,11 @@ document.addEventListener('DOMContentLoaded', () => {
             resultElement.textContent = 'Erro: Arquivo de configuração não encontrado.';
             return;
         }
+        if (typeof APPS_SCRIPT_URL === 'undefined' || APPS_SCRIPT_URL.includes("https://script.google.com/macros/s/AKfycbzO-F73N55oLF0ZM9zBvoFCdmrlo-92x8lkIvVTAoaApf0mVz_MdY5eLHppzMEf9P0ZdQ/exec")) {
+            resultElement.textContent = 'Erro: URL do Apps Script não configurada no arquivo config.js.';
+            console.error("A variável APPS_SCRIPT_URL não está configurada.");
+            return;
+        }
 
         // Constrói a URL para a API do Google Sheets
         const range = `${SHEET_NAME}!A:C`; // Pesquisa na coluna A e retorna dados das colunas A, B e C
@@ -182,21 +187,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     capturePhotoBtn.style.display = 'none'; // Botão de captura fica escondido
 
                     // Configura o evento para o botão "Tirar Fotos"
-                    startPhotoBtn.onclick = () => startPhotoCamera(folderName);
+                    startPhotoBtn.onclick = () => startPhotoCamera(folderName, barcode); // Passa o código de barras original
                 } else {
                     // Código não encontrado na planilha
                     resultElement.textContent = `${barcode} não encontrado!`;
+                    photoCaptureContainer.style.display = 'none'; // Garante que a seção de fotos seja escondida
                 }
             } else {
                 resultElement.textContent = 'Planilha vazia ou não encontrada.';
+                photoCaptureContainer.style.display = 'none';
             }
         } catch (error) {
             console.error('Erro na busca:', error);
             resultElement.textContent = `Falha na busca: ${error.message}`;
+            photoCaptureContainer.style.display = 'none';
         }
     }
 
-    async function startPhotoCamera(folderName) {
+    async function startPhotoCamera(folderName, barcode) {
         // Elementos que serão escondidos temporariamente
         const inputContainer = document.getElementById('input-container');
         const resultContainer = document.getElementById('result-container');
@@ -209,6 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 1; i <= TOTAL_PHOTOS; i++) {
             document.getElementById(`photo${i}-status`).textContent = `Foto ${i}: ⚪`;
             document.getElementById(`thumbnail-${i}`).src = "";
+            document.getElementById(`thumbnail-${i}`).style.display = 'none';
         }
         photoThumbnailsContainer.style.display = 'none';
         photoProgressIndicator.style.display = 'block';
@@ -222,13 +231,17 @@ document.addEventListener('DOMContentLoaded', () => {
         inputContainer.style.display = 'none';
         resultContainer.style.display = 'none';
 
+        // Limpa listeners antigos para evitar execuções múltiplas
+        let captureClickHandler = null;
+        capturePhotoBtn.removeEventListener('click', captureClickHandler);
+
         try {
             stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
             cameraView.srcObject = stream;
             await cameraView.play();
 
             // Define a função para capturar a foto
-            const handleCapture = async () => {
+            captureClickHandler = async () => {
                 // 1. Captura a imagem
                 photoCanvas.width = cameraView.videoWidth;
                 photoCanvas.height = cameraView.videoHeight;
@@ -241,9 +254,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const photoNumber = photoCache.length;
                 document.getElementById(`photo${photoNumber}-status`).textContent = `Foto ${photoNumber}: ✅`;
                 document.getElementById(`thumbnail-${photoNumber}`).src = imageData;
+                document.getElementById(`thumbnail-${photoNumber}`).style.display = 'inline-block';
                 
                 if (photoNumber === 1) {
-                    photoThumbnailsContainer.style.display = 'flex';
+                    photoThumbnailsContainer.style.display = 'flex'; // Mostra o container de miniaturas
                 }
 
                 if (photoNumber < TOTAL_PHOTOS) {
@@ -269,23 +283,23 @@ document.addEventListener('DOMContentLoaded', () => {
                             photoCache.forEach((imgData, index) => {
                                 const link = document.createElement('a');
                                 link.href = imgData;
-                                link.download = `${folderName}-foto-${index + 1}.jpg`;
+                                link.download = `${barcode}_${index + 1}.jpg`;
                                 link.click();
                             });
                         } else {
                             // Lógica para salvar na pasta escolhida pelo usuário
-                            await savePhotosToDirectory(photoCache, folderName);
+                            await savePhotosToDirectory(photoCache, folderName, barcode);
                         }
                         saveLocalBtn.style.display = 'none'; // Esconde o botão após o uso
+                        saveLocalBtn.onclick = null; // Limpa o evento para evitar chamadas múltiplas
                     };
 
-                    // Remove o listener para não acumular
-                    capturePhotoBtn.removeEventListener('click', handleCapture);
+                    capturePhotoBtn.removeEventListener('click', captureClickHandler);
                 }
             };
 
             // Adiciona o listener inicial para capturar as fotos
-            capturePhotoBtn.addEventListener('click', handleCapture);
+            capturePhotoBtn.addEventListener('click', captureClickHandler);
 
         } catch (error) {
             console.error('Erro ao iniciar câmera para fotos:', error);
@@ -293,10 +307,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Garante que a UI volte ao normal em caso de erro na câmera
             inputContainer.style.display = 'flex';
             resultContainer.style.display = 'block';
+            capturePhotoBtn.removeEventListener('click', captureClickHandler);
         }
     }
 
-    async function savePhotosToDirectory(photos, folderName) {
+    async function savePhotosToDirectory(photos, folderName, barcode) {
         try {
             // 1. Pede ao usuário para escolher uma pasta
             const dirHandle = await window.showDirectoryPicker();
@@ -306,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 2. Itera sobre as fotos em cache e as salva
             for (let i = 0; i < photos.length; i++) {
                 const imgData = photos[i];
-                const fileName = `${folderName}-foto-${i + 1}.jpg`;
+                const fileName = `${barcode}_${i + 1}.jpg`;
 
                 // Converte a imagem Base64 para um Blob
                 const response = await fetch(imgData);
@@ -325,6 +340,8 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Erro ao salvar fotos localmente:', error);
             if (error.name !== 'AbortError') {
                 resultElement.innerHTML = `Nº do Pedido: <strong>${folderName}</strong><br><span style="color: red;">Falha ao salvar as fotos.</span>`;
+            } else {
+                resultElement.innerHTML = `Nº do Pedido: <strong>${folderName}</strong><br>Operação de salvamento cancelada.`;
             }
         }
     }

@@ -26,11 +26,18 @@ jobs:
 
       # 2. Cria o arquivo config.js usando os Secrets
       - name: Create config.js
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+          SHEET_NAME: ${{ secrets.SHEET_NAME }}
+          APPS_SCRIPT_URL: ${{ secrets.APPS_SCRIPT_URL }}
         run: |
-          echo "const GOOGLE_API_KEY = '${{ secrets.GOOGLE_API_KEY }}';" >> workspaces/VTURBO/config.js
-          echo "const SPREADSHEET_ID = '${{ secrets.SPREADSHEET_ID }}';" >> workspaces/VTURBO/config.js
-          echo "const SHEET_NAME = '${{ secrets.SHEET_NAME }}';" >> workspaces/VTURBO/config.js
-          echo "const APPS_SCRIPT_URL = '${{ secrets.APPS_SCRIPT_URL }}';" >> workspaces/VTURBO/config.js
+          cat <<EOF > workspaces/VTURBO/config.js
+          const GOOGLE_API_KEY = '$GOOGLE_API_KEY';
+          const SPREADSHEET_ID = '$SPREADSHEET_ID';
+          const SHEET_NAME = '$SHEET_NAME';
+          const APPS_SCRIPT_URL = '$APPS_SCRIPT_URL';
+          EOF
         # ATENÇÃO: Verifique se o caminho 'workspaces/VTURBO/config.js' está correto!
 
       # 3. Configura o ambiente para o GitHub Pages
