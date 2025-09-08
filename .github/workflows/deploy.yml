@@ -38,7 +38,6 @@ jobs:
           const SHEET_NAME = '$SHEET_NAME';
           const APPS_SCRIPT_URL = '$APPS_SCRIPT_URL';
           EOF
-        # ATENÇÃO: Verifique se o caminho 'workspaces/VTURBO/config.js' está correto!
 
       # 3. Configura o ambiente para o GitHub Pages
       - name: Setup Pages
@@ -48,9 +47,9 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Faz o upload da pasta que contém seu site
+          # Faz o upload da pasta raiz do projeto. O arquivo config.js será incluído.
+          # O GitHub Pages irá servir os arquivos a partir do diretório especificado.
           path: './workspaces/VTURBO'
-          # ATENÇÃO: Verifique se o caminho './workspaces/VTURBO' está correto!
 
       # 5. Publica no GitHub Pages
       - name: Deploy to GitHub Pages
