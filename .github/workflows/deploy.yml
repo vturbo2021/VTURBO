@@ -1,0 +1,51 @@
+# .github/workflows/deploy.yml
+
+name: Deploy to GitHub Pages
+
+on:
+  # Roda quando você faz um push para a branch 'main'
+  push:
+    branches:
+      - main
+  # Permite que você rode este workflow manualmente pela aba Actions
+  workflow_dispatch:
+
+# Define as permissões necessárias para o job
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Pega o código do seu repositório
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Cria o arquivo config.js usando os Secrets
+      - name: Create config.js
+        run: |
+          echo "const GOOGLE_API_KEY = '${{ secrets.GOOGLE_API_KEY }}';" >> workspaces/VTURBO/config.js
+          echo "const SPREADSHEET_ID = '${{ secrets.SPREADSHEET_ID }}';" >> workspaces/VTURBO/config.js
+          echo "const SHEET_NAME = '${{ secrets.SHEET_NAME }}';" >> workspaces/VTURBO/config.js
+          echo "const APPS_SCRIPT_URL = '${{ secrets.APPS_SCRIPT_URL }}';" >> workspaces/VTURBO/config.js
+        # ATENÇÃO: Verifique se o caminho 'workspaces/VTURBO/config.js' está correto!
+
+      # 3. Configura o ambiente para o GitHub Pages
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      # 4. Faz o upload dos artefatos (sua aplicação) para o GitHub Pages
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Faz o upload da pasta que contém seu site
+          path: './workspaces/VTURBO'
+          # ATENÇÃO: Verifique se o caminho './workspaces/VTURBO' está correto!
+
+      # 5. Publica no GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
