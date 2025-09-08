@@ -22,6 +22,13 @@
         <div id="result-container">
             <p>Código escaneado: <strong id="result">Aguardando...</strong></p>
         </div>
+
+        <!-- Novo container para a funcionalidade de tirar fotos -->
+        <div id="photo-capture-container" style="display: none; flex-direction: column; align-items: center; margin-top: 15px;">
+            <button id="start-photo-btn">Tirar Fotos da Entrega</button>
+            <button id="capture-photo-btn" style="display: none; margin-top: 10px;">Capturar Foto</button>
+            <canvas id="photo-canvas" style="display: none;"></canvas>
+        </div>
     </div>
     
     <div id="camera-button-container">

@@ -107,3 +107,19 @@ label[for="barcode-input"] {
     min-width: 300px;
     text-align: center;
 }
+
+/* Estilos para os novos botões de captura de foto */
+#start-photo-btn, #capture-photo-btn {
+    background-color: #ff9800; /* Laranja */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+#start-photo-btn:hover, #capture-photo-btn:hover {
+    background-color: #f57c00; /* Laranja mais escuro */
+}
