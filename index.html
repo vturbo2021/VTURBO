@@ -8,10 +8,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <title>Scanner de Entregas</title>
     <link rel="stylesheet" href="./style.css">
+    <!-- Adiciona um ícone à aba do navegador -->
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
 
-    <h1>VTURBO ENTREGAS 2.1</h1>
+    <h1>VTURBO ENTREGAS 2.3</h1>
 
     <div id="main-content">
         <div id="input-container">
@@ -25,9 +27,29 @@
 
         <!-- Novo container para a funcionalidade de tirar fotos -->
         <div id="photo-capture-container" style="display: none; flex-direction: column; align-items: center; margin-top: 15px;">
+            <!-- Indicadores de Progresso das Fotos -->
+            <div id="photo-progress-indicator" style="display: none; margin-bottom: 10px; font-size: 14px;">
+                <span id="photo1-status" class="photo-status">Foto 1: ⚪</span>
+                <span id="photo2-status" class="photo-status">Foto 2: ⚪</span>
+                <span id="photo3-status" class="photo-status">Foto 3: ⚪</span>
+                <br>
+                <span id="photo4-status" class="photo-status">Foto 4: ⚪</span>
+                <span id="photo5-status" class="photo-status">Foto 5: ⚪</span>
+                <span id="photo6-status" class="photo-status">Foto 6: ⚪</span>
+            </div>
             <button id="start-photo-btn">Tirar Fotos da Entrega</button>
-            <button id="capture-photo-btn" style="display: none; margin-top: 10px;">Capturar Foto</button>
+            <button id="capture-photo-btn" style="display: none; margin-top: 10px;">Capturar</button>
+            <!-- Container para as miniaturas das fotos -->
+            <div id="photo-thumbnails-container" style="display: none; margin-top: 15px;">
+                <img id="thumbnail-1" class="thumbnail" alt="Miniatura da Foto 1">
+                <img id="thumbnail-2" class="thumbnail" alt="Miniatura da Foto 2">
+                <img id="thumbnail-3" class="thumbnail" alt="Miniatura da Foto 3">
+                <img id="thumbnail-4" class="thumbnail" alt="Miniatura da Foto 4">
+                <img id="thumbnail-5" class="thumbnail" alt="Miniatura da Foto 5">
+                <img id="thumbnail-6" class="thumbnail" alt="Miniatura da Foto 6">
+            </div>
             <canvas id="photo-canvas" style="display: none;"></canvas>
+            <button id="save-local-btn" style="display: none; margin-top: 20px;">Salvar Fotos no Dispositivo</button>
         </div>
     </div>
     
@@ -35,6 +57,8 @@
         <button id="start-scan-btn">Escanear com Câmera</button>
     </div>
 
+    <!-- Adiciona a biblioteca ZXing.js como fallback para o scanner -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/zxing-browser.min.js"></script>
     <script src="./config.js"></script>
     <script src="./scanner.js"></script>
 </body>

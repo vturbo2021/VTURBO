@@ -109,7 +109,7 @@ label[for="barcode-input"] {
 }
 
 /* Estilos para os novos botões de captura de foto */
-#start-photo-btn, #capture-photo-btn {
+#start-photo-btn, #capture-photo-btn, #save-local-btn {
     background-color: #ff9800; /* Laranja */
     color: white;
     border: none;
@@ -120,6 +120,31 @@ label[for="barcode-input"] {
     font-weight: 600;
 }
 
-#start-photo-btn:hover, #capture-photo-btn:hover {
+#save-local-btn {
+    background-color: #4CAF50; /* Verde */
+}
+
+#start-photo-btn:hover, #capture-photo-btn:hover, #save-local-btn:hover {
     background-color: #f57c00; /* Laranja mais escuro */
+}
+
+/* Estilos para as miniaturas das fotos */
+#photo-thumbnails-container {
+    display: flex;
+    flex-wrap: wrap; /* Permite que as imagens quebrem a linha */
+    justify-content: center;
+    gap: 10px; /* Espaço entre as fotos */
+}
+
+.thumbnail {
+    width: 100px;
+    height: 75px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    object-fit: cover; /* Garante que a imagem preencha o espaço sem distorcer */
+}
+
+.photo-status {
+    margin: 0 8px;
+    display: inline-block;
 }
